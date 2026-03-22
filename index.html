@@ -157,6 +157,11 @@
 
                     // Centrar mapa la primera vez
                     map.setView([lat, lon], Math.max(map.getZoom(), 19));
+
+                    // ── Registrar automáticamente como Punto A ──
+                    nuevoMarcador(lat, lon, "GPS");
+                    document.getElementById('status').innerText =
+                        '📍 Punto A fijado · GPS activo · Muévete al siguiente vértice y pulsa ➕ PUNTO';
                 } else if (!gpsCongelado) {
                     // Actualizar sólo si el usuario NO está arrastrando
                     marcadorGPS.setLatLng([lat, lon]);
@@ -459,16 +464,16 @@
                 doc.setFontSize(10);
                 doc.text(new Date().toLocaleDateString('es-ES'), PW - M, 10.5, {align:'right'});
 
-                // Mapa como imagen (ocupa la parte superior)
-                var filas   = marcadores.length;
-                var tablaH  = 14 + 7 + (filas * 7) + 6;  // mm
-                var mapaH   = PH - 16 - M - tablaH - 4;  // mm disponibles
+                // ── Layout dos columnas: mapa izquierda | tabla derecha ──
                 var mapaY   = 18;
+                var mapaH   = PH - mapaY - M;   // toda la altura útil
+                var tablaW  = 80;               // columna derecha (mm)
+                var mapaW   = PW - M*2 - tablaW - 4; // columna izquierda
 
-                // Recortar el canvas del mapa al área de la parcela (sin tiles de más)
+                // Recortar canvas ajustado a los vértices (padding reducido: 0.4 tiles)
                 var pxNW = ll2px(nw.lat, nw.lng);
                 var pxSE = ll2px(se.lat, se.lng);
-                var pad  = TILE; // 1 tile de padding visual
+                var pad  = Math.round(TILE * 0.4);
                 var cx   = Math.max(0, pxNW.x - pad);
                 var cy   = Math.max(0, pxNW.y - pad);
                 var cw   = Math.min(mc.width,  pxSE.x + pad) - cx;
@@ -479,57 +484,65 @@
                 crop.width = cw; crop.height = ch;
                 crop.getContext('2d').drawImage(mc, cx, cy, cw, ch, 0, 0, cw, ch);
 
+                // Escalar para llenar al máximo la columna izquierda manteniendo proporción
+                var escH = (ch / cw) * mapaW;
+                var mapaWfinal, mapaHfinal;
+                if (escH <= mapaH) {
+                    mapaWfinal = mapaW;
+                    mapaHfinal = escH;
+                } else {
+                    mapaHfinal = mapaH;
+                    mapaWfinal = (cw / ch) * mapaH;
+                }
+
                 var mapImgData = crop.toDataURL('image/jpeg', 0.95);
-                var mapaW      = PW - M*2;
-                // Mantener proporción
-                var propH = (ch / cw) * mapaW;
-                if (propH > mapaH) { mapaW = (cw/ch)*mapaH; }
-                var mapaHFinal = Math.min(propH, mapaH);
-
-                doc.addImage(mapImgData, 'JPEG', M, mapaY, mapaW, mapaHFinal);
+                doc.addImage(mapImgData, 'JPEG', M, mapaY, mapaWfinal, mapaHfinal);
                 doc.setDrawColor(80,80,80); doc.setLineWidth(0.3);
-                doc.rect(M, mapaY, mapaW, mapaHFinal);
+                doc.rect(M, mapaY, mapaWfinal, mapaHfinal);
 
-                // ── Tabla vectorial ──
-                var ty = mapaY + mapaHFinal + 5;
+                // ── Columna derecha: tabla ──
+                var tx0 = M + mapaWfinal + 4;
+                var ty  = mapaY;
 
                 // Área
                 var areaText = document.getElementById('areaDisplay').innerText;
-                doc.setFontSize(12); doc.setFont('helvetica','bold');
+                doc.setFontSize(10); doc.setFont('helvetica','bold');
                 doc.setTextColor(44,62,80);
-                doc.text('Superficie: ', M, ty);
-                doc.setTextColor(39,174,96);
-                doc.text(areaText, M + 28, ty);
-                ty += 8;
+                doc.text('Superficie:', tx0, ty + 5);
+                ty += 7;
+                doc.setFontSize(9); doc.setTextColor(39,174,96);
+                doc.text(areaText, tx0, ty + 4);
+                ty += 9;
 
                 // Cabecera tabla
                 doc.setFillColor(44, 62, 80);
-                doc.rect(M, ty, PW - M*2, 7, 'F');
+                doc.rect(tx0, ty, tablaW, 7, 'F');
                 doc.setTextColor(255,255,255);
-                doc.setFontSize(9); doc.setFont('helvetica','bold');
-                var cols = [M+2, M+20, M+60, M+100, M+140];
+                doc.setFontSize(8); doc.setFont('helvetica','bold');
+                var colW = [7, 24, 24, 18]; // anchos relativos
+                var colX = [tx0+1, tx0+8, tx0+33, tx0+58];
                 ['Vért.','Latitud','Longitud','Fuente'].forEach(function(h,i){
-                    doc.text(h, cols[i], ty+5);
+                    doc.text(h, colX[i], ty+5);
                 });
                 ty += 7;
 
-                // Filas
-                doc.setFont('helvetica','normal'); doc.setFontSize(9);
+                // Filas de vértices
+                doc.setFont('helvetica','normal'); doc.setFontSize(8);
                 marcadores.forEach(function(m, i) {
                     var ll  = m.getLatLng(), lbl = String.fromCharCode(65+i);
                     if (i%2===0) {
                         doc.setFillColor(245,245,245);
-                        doc.rect(M, ty, PW-M*2, 7, 'F');
+                        doc.rect(tx0, ty, tablaW, 6, 'F');
                     }
                     doc.setTextColor(50,50,50);
                     [lbl, ll.lat.toFixed(6), ll.lng.toFixed(6), m._fuente||'—']
-                        .forEach(function(v,c){ doc.text(v, cols[c], ty+5); });
-                    ty += 7;
+                        .forEach(function(v,c){ doc.text(v, colX[c], ty+4.5); });
+                    ty += 6;
                 });
 
                 // Pie
                 doc.setFontSize(7); doc.setTextColor(150,150,150);
-                doc.text('Topografía Pro v2.0 · Roberto Garcia Sanz · topografia-pro.html',
+                doc.text('Topografía Pro v2.0 · Roberto Garcia Sanz',
                     PW/2, PH - 3, {align:'center'});
 
                 // ── Guardar / abrir PDF ──
