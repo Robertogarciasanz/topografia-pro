@@ -60,9 +60,9 @@
 
 <div class="controles">
     <div class="autor">📐 <strong>Topografía Pro</strong> &nbsp;·&nbsp; Roberto Garcia Sanz &nbsp;·&nbsp; v2.0</div>
-    <button class="btn btn-seguir" id="btnSeguir" onclick="toggleSeguir()">🎯 SEGUIRME</button>
-    <button class="btn btn-coord" onclick="ingresarCoordenadas()">📍 COORDS</button>
+    <button class="btn btn-seguir" id="btnSeguir" onclick="toggleSeguir()">🎯 POSICIÓN</button>
     <button class="btn btn-add"   onclick="manualPunto()">➕ PUNTO</button>
+    <button class="btn btn-coord" onclick="ingresarCoordenadas()">📍 COORDS</button>
     <button class="btn btn-print" onclick="generarPlanoJPG()">💾 PLANO</button>
     <button class="btn btn-borrar" onclick="borrarTodo()">🗑️ RESET</button>
 </div>
@@ -107,7 +107,7 @@
         seguirActivo = true;
         gpsCongelado = false;
         document.getElementById('btnSeguir').classList.add('activo');
-        document.getElementById('btnSeguir').innerText = '🎯 SIGUIENDO…';
+        document.getElementById('btnSeguir').innerText = '🎯 SIGUIENDO…';  // activo
         document.getElementById('status').innerText = '📡 Buscando señal GPS…';
 
         watchId = navigator.geolocation.watchPosition(
@@ -188,7 +188,7 @@
         if (marcadorGPS)  { map.removeLayer(marcadorGPS);  marcadorGPS  = null; }
         if (circuloGPS)   { map.removeLayer(circuloGPS);   circuloGPS   = null; }
         document.getElementById('btnSeguir').classList.remove('activo');
-        document.getElementById('btnSeguir').innerText = '🎯 SEGUIRME';
+        document.getElementById('btnSeguir').innerText = '🎯 POSICIÓN';
         document.getElementById('status').innerText = 'Seguimiento GPS desactivado.';
     }
 
